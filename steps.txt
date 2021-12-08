@@ -1,0 +1,70 @@
+1: Navbar
+2: Forms and User Input
+3: FlaskForm(forms.py)
+4: Create registration form (form.py)
+5: Create login form(form.py)
+6: Create routes for registration and login(users/routes.py)
+
+7: Create register.html
+8: Create Post method in register routes
+9: Check if our form validated when it was submitted(route.register)
+
+10: Do alert message(flash) in layout.html
+11: Do some validation feedback to user in register.html
+12: Create login.html
+13: Reset the password function in login.html
+14: Validation in route.login
+15: SQLAlchemy database and User Post models
+16: Package Structure
+
+17: User Authentication (pip install flask-bcrypt)
+18: Initialize the bcrypt (__init__.py)
+19: Do authentication in routes.py
+20: Create a custom validation in registration.form(forms.py)
+
+21: Flask_login --> LoginManager 
+22: Create the user loader decorator (__init__.py)
+23: login route
+24: logout route
+25: current_user.is_authenticated(register.route, login.route, layout.html)
+26: account route and account.html
+
+27: User account and User Profile (account.html)
+28: image_file(routes.account)
+29: Create a new form to update our user account information (forms.py)
+30: Pass the form into account.html
+31: When we go to the account page, we wanna display the account information before we update(routes.account)
+32: Create new field in UpdateAccountForm to update the account Profile(forms.py)
+33: Save the users uploaded image to the file system
+
+
+34: Create a post route
+35: Create a create_post html
+36: Create PostForm() forms.py
+37: Create a new route(post)
+38: Create post.html
+39: Create a new route(update)
+40: Link the update button and delete button(post.html)
+41: Create a new route(delete_post)
+
+42: Using the paginate method in route.home
+43: Create the link of different pages in home.html
+44: Reorder the posts in our query(the newest post to be first.) --> route.home
+45: Create a new route to display only the posts from these particular user when we click these links of the post.
+    --> user_posts
+
+
+
+46: Generate a secure time-sensitive token to ensure that only a specific user can reset their password and we can send an 
+    email with that reset password information. --> models.User
+47: Create new forms(RequestResetForm and ResetPasswordForm)
+48: Create new routes and templates (reset_request() and reset_token())
+49: Create a new route that the user actually resets the password --> routes.reset_password
+50: Create a mail server --> __init__.py
+51: Create a new function to send reset token
+
+52: BluePrints
+
+53: Custom error pages --> Error Packages
+54: 
+

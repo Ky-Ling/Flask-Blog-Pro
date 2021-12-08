@@ -1,0 +1,450 @@
+一：Creating Database
+(1)	CREATE DATABASE IF NOT EXISTS sql_store2;
+(2)	DROP DATABASE IF EXISTS sql_store2;
+
+
+二：Creating Tables
+CREATE DATABASE IF NOT EXISTS sql_store2;
+USE sql_store2;
+CREATE TABLE customers
+(
+	customer_is INT PRIMARY KEY AUTO_INCREMENT,
+    first_name  VARCHAR(50) NOT NULL,
+    points      INT NOT NULL DEFAULT 0,
+    email       VARCHAR(255) NOT NULL UNIQUE
+);
+
+
+However, we are not able to reexecute this script, because we already have this customers table in our database,
+    and when we try to recreate it MySQL will yell at us, 只需要在CREATE TABLE customers 语句前面加上DROP TABLE IF EXISTS customers.
+    And then we can create this table. 或者将CREATE TABLE customers 语句修改为CREATE TABLE  IF NOT EXISTS customers.
+
+CREATE DATABASE IF NOT EXISTS sql_store2;
+USE sql_store2;
+DROP TABLE IF EXISTS customers;
+CREATE TABLE IF NOT EXISTS customers
+(
+	customer_is INT PRIMARY KEY AUTO_INCREMENT,
+    first_name  VARCHAR(50) NOT NULL,
+    points      INT NOT NULL DEFAULT 0,
+    email       VARCHAR(255) NOT NULL UNIQUE
+);
+执行语句。
+
+
+
+三：Altering Tables
+USE sql_store2;
+ALTER TABLE customers
+	ADD last_name VARCHAR(50) NOT NULL AFTER first_name;
+
+
+
+USE sql_store2;
+ALTER TABLE customers
+	ADD last_name VARCHAR(50) NOT NULL AFTER first_name,
+    ADD city      VARCHAR(50) NOT NULL,
+    MODIFY COLUMN first_name VARCHAR(55) DEFAULT '',
+    DROP points;
+
+Be remember, do not ever alter a table in a production environment, because that can have really bad consequences.
+
+
+
+
+四：Creating relationship
+Let’s create the orders table and add a relationship between the customers and orders,
+
+CREATE DATABASE IF NOT EXISTS sql_store2;
+USE sql_store2;
+DROP TABLE IF EXISTS customers;
+CREATE TABLE IF NOT EXISTS customers
+(
+	customer_is INT PRIMARY KEY AUTO_INCREMENT,
+    first_name  VARCHAR(50) NOT NULL,
+    points      INT NOT NULL DEFAULT 0,
+    email       VARCHAR(255) NOT NULL UNIQUE
+);
+
+DROP TABLE IF EXISTS orders;
+CREATE TABLE orders
+(
+	order_id    INT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    FOREIGN KEY fk_orders_customers (customer_id)
+		REFERENCES customers (customer_id)
+		ON UPDATE CASCADE
+        ON DELETE NO ACTION
+);
+
+Now if we reexecute the script, we are going to get an error on line 3. MySQL will not be able to drop the customers table,
+    because now it is part of the relationship. So to delete the customers table, first we need to delete the orders table,
+    because this table depends on the customers table. If you delete the orders table, customers table will 
+    not be part of the relationship and you can easily delete it. 所以将 DROP TABLE IF EXISTS orders; 移至 
+    DROP TABLE IF EXISTS customers; 前面。执行成功后, our database is regenerated from scratch.
+
+
+
+
+
+
+五：Altering Primary/Foreign Keys
+How to add the relationship after creating the table.
+
+打开之前建立的Alter页面：
+USE sql_store2;
+ALTER TABLE customers
+	ADD last_name VARCHAR(50) NOT NULL AFTER first_name,
+    ADD city      VARCHAR(50) NOT NULL,
+    MODIFY COLUMN first_name VARCHAR(55) DEFAULT '',
+    DROP points;
+    
+ALTER TABLE orders
+	ADD PRIMARY KEY (order_id),
+    DROP PRIMARY KEY,
+	DROP FOREIGN KEY fk_orders_customers,
+    ADD FOREIGN KEY fk_orders_customers (customer_id)
+		REFERENCES customers (customer_id)
+        ON UPDATE CASCADE
+        ON DELETE NO ACTION
+
+
+
+
+
+
+六：Character Sets and Collations
+
+What is a character? When you store a script like “abc” , MySQL will convert each character to it’s numerical representation.
+    Using a character set. So a character set is a table that maps each character to a number.
+
+A collation is basically a bunch of rules, that determines how the characters in a given language are sorted
+
+ 
+ 
+七：Storage Engines
+SHOW ENGINES
+
+Alter Engines: (Changing the storage engines of a table can be an expensive operation, because MySQL has to rebuild the table. 
+    During this time your table is not going to be accessible, so do not do this in production unless you have a scheduled 
+    maintenance.)
+
+ALTER TABLE customers
+ENGINE = InnoDB
+
+
+
+
+
+八：Indexing for High Performance
+Indexs speed up our queries
+
+
+
+
+九：Indexes
+Indexes are basically data structures, that database engines use to quickly find data as an analogy, you think of a 
+    telephone directory.
+
+
+COST OF INDEXES:
+1: Increase the database
+2: Slow down the writes
+
+
+For these reasons, we should reserve indexes for performance critical queries.
+    Do not create indexes based on your tables, just design indexes based on your queries, not your tables.
+    (Because the whole point of using an index is to speed up a slow query.)
+
+
+
+
+
+
+十：Creating Indexes
+先插入课程资料中的SQL Text File (load_1000_customers)
+
+新建查询：
+SELECT customer_id 
+FROM customers
+WHERE state = 'CA'
+
+修改查询为：
+EXPLAIN SELECT customer_id 
+FROM customers
+WHERE state = 'CA'
+执行后：着重注意the two columns: type, rows
+Type: When we see all under type that means MySQL is going to do a full table scan. Which means, it is going to read or scan every record in this table.
+
+Rows: You can see the number of records that we are scanning .In this case, we have 1010, because that’s the number of records we have in the customers table.
+验证一下：
+SELECT COUNT(*) FROM customers
+
+回到之前的查询， because currently we donnot have an index on the state column, in order to find the customers located in CA, MySQL has to scan every single record in this table, and this can get very slow as our customers table grows large. So we put an index on the state column to speed up this query.
+
+CREATE INDEX idx_state ON customers (state); （这段代码不用执行）
+单独执行上面的语句：
+EXPLAIN SELECT customer_id 
+FROM customers
+WHERE state = 'CA'
+可以看到执行结果发生变化， About type, we no longer have all, which means we donnot have a full table scan, and with the rows column, we see 112, so we reduce the number of records that MySQL has to read from 1010 to 112. This is far faster.
+
+
+练习：Write a query to find customers with more than 1000points.
+第一步：
+EXPLAIN SELECT customer_id 
+FROM customers
+WHERE points > 1000;
+执行查看结果
+第二步：
+CREATE INDEX idx_points ON customers (points);（这段代码不用执行）
+执行第一步中的那段代码，查看结果，可看到发生相应变化
+
+
+十一：Viewing Indexes
+SHOW INDEXES IN customers;
+
+之后输入以下代码并单独执行：
+ANALYZE TABLE customers;（this will regenerate the statistics for this table）
+之后再执行第一段代码，可看到相应变化
+
+十二：Prefix Indexes
+Now in the column we want to create an index on is a string column, like CAHR, VARCHAR, TEXT, BLOB.
+
+We want to create an index on the last_name column in the customers table.
+CREATE INDEX idx_lastname ON customers (last_name(20));
+
+But how to find the optional prefix lengh?
+First, we will get the number of records in this table.
+	CREATE INDEX idx_lastname ON customers (last_name(20));
+SELECT COUNT(*)
+FROM customers;
+Then, let’s get the first character of our customers last_name, 所以更改第二行代码为：
+CREATE INDEX idx_lastname ON customers (last_name(20));
+SELECT COUNT(DISTINCT LEFT(last_name, 1))
+FROM customers;
+
+We use DISTINCT and to see how many unique values we get, 然后执行代码. Our goal here should be to maximize the number of unique values in our index. So we try a different prefix:
+
+CREATE INDEX idx_lastname ON customers (last_name(20));
+SELECT 
+	COUNT(DISTINCT LEFT(last_name, 1)),
+	COUNT(DISTINCT LEFT(last_name, 5))
+FROM customers;
+
+然后再次更改至为10， we can see a very small improvement. So we are including twice as many charactors and we see a very small improvement, so in this case, 5 is the optional prefix length.
+
+十三：Full-text Indexes
+We use this index to build fast and flexible applications in our search engines.
+
+创建一个新的数据库：sql_blog(在课程资料里)
+The users searches for “react redux” on our blog. So let’s say someone lands on our blog and searches for “react redux”. How can we find the posts that are about react redux.
+
+CREATE FULLTEXT INDEX idx_title_body ON posts (title, body);
+
+SELECT *
+FROM posts
+WHERE MATCH (title, body) AGAINST ('react redux');
+
+
+One of the beauties of full text searches is that they include a relevance score. So base on a number of factors, MySQL calculates a relevancy score for each row that contain the search phrase. The relevancy score is a floating point number between 0 to one.
+
+CREATE FULLTEXT INDEX idx_title_body ON posts (title, body);
+
+SELECT *, MATCH (title, body) AGAINST ('react redux')
+FROM posts
+WHERE MATCH (title, body) AGAINST ('react redux');
+
+查看结果。So the result is sorted by relevancy score in descending order. Now these full text searches have two modes. One is the natural language mode which is the default mode, and that’s what we are using here. The other is the boolean mode, and with this mode we can include or exclude certain word just like how we use Google.
+
+CREATE FULLTEXT INDEX idx_title_body ON posts (title, body);
+
+SELECT *, MATCH (title, body) AGAINST ('react redux')
+FROM posts
+WHERE MATCH (title, body) AGAINST ('react -redux' IN BOOLEAN MODE);
+
+So the full text indexes are very powerful, use them if you want to build a search engine in your application, especially if you want to search on long string columns like the body of a newspaper article or a blog post or the description of a product. Otherwise, for shorter string columns like name and address, use prefix indexes.
+
+十四：Composite Indexes
+USE sql_store;
+SHOW INDEXES IN customers;
+EXPLAIN SELECT customer_id FROM customers
+WHERE state = 'CA' AND points > 1000;
+
+When MySQL executes this query it uses our state index to quickly find customers licated in CA, but then is has to go through all this customers and check their points. This part of a query require a table scan, because we donnot have the number of points in each customer in our state index. Now here is where things get tricky. With a composite index we can index multiple columns, so here we can create a composite index on the state and points columns, and with this index we can quickly find customers located in any number of points.
+
+USE sql_store;
+CREATE INDEX idx_state_points ON customers (state, points);
+SHOW INDEXES IN customers;
+EXPLAIN SELECT customer_id FROM customers
+WHERE state = 'CA' AND points > 1000;
+
+执行代码，可以看到rows 从112 变为了58。
+So in reality, most of the time we should use composite indexes, because a query can have multiple filters.
+
+How many columns should you include in your indexes? In MySQL an index can have a maximum of 16 columns, and generally speaking, that is a pretty high number. And somewhere between 4-6 columns bodes well. You should always experiment based on your queries and the amount od data you have.
+
+So we should drop two columns.
+
+SHOW INDEXES IN customers;
+DROP INDEX idx_state ON customers;
+
+之后更改代码;
+SHOW INDEXES IN customers;
+DROP INDEX idx_points ON customers;
+
+
+
+十五：Order of Column in Composite Indexes
+Here are two rules:
+1: Put the most frequently used columns first
+2: We should put the columns with a higher cardinality first
+
+EXPLAIN SELECT customer_id
+FROM customers
+WHERE state = 'CA' AND last_name LIKE 'A%';
+
+CREATE INDEX idx_lastname_state ON customers
+(last_name, state);
+
+So, if you put the last_name column first, in order to satisfy this query, MySQL has to go through each last_name that starts with A, in that segment, is has to find the customers located in CA. That looks inefficient to me. But what if we reverse the orders of these columns? If we put the state first, MySQL can quickly go to the segment for CA, and in that segment, it can quickly select the customers who’s last_name start with A, because these last names are sorted alphabetically. 
+
+Now let’s create another index, but with the opposite order.
+EXPLAIN SELECT customer_id
+FROM customers
+WHERE state = 'CA' AND last_name LIKE 'A%';
+
+CREATE INDEX idx_state_lastname ON customers
+(state, last_name);
+可看到rows变为了7
+
+Our second rule, the rule about cardinality suggests that the last name should come first, because it has a higher cardinality. But before I told you before, we should always look at our queries, and see how MySQL would execute them using different indexes.
+
+
+Summary
+Order of columns:
+1: Frequently used columns
+2: High cardinality columns
+3: Take your queries into account
+
+Try to understand how MySQL would execute your query with different indexes. You’re not going to be able to come up with one compound index that will speed up all your queries. As your system grows, you might need several indexes on the columns on different orders. 
+
+十六：When indexes are ignored
+EXPLAIN SELECT customer_id
+FROM customers
+WHERE state = 'CA' OR points >1000;
+执行代码可以发现rows 有1010 之多。
+So how can we optimize this query further? This is one of those situations where you have to rewrite your query to utilize your indexes in the best possible way. In this case, we’re going to chop up this query into two queries. 
+
+CREATE INDEX idx_points ON customers (points);
+
+EXPLAIN 
+	SELECT customer_id FROM customers
+	WHERE state = 'CA' 
+    UNION
+    SELECT customer_id FROM customers
+WHERE points > 1000;
+
+另外一个例子：
+EXPLAIN SELECT customer_id FROM customers
+WHERE points + 10 > 2010;
+
+We can see the rows are 1010, What is the reason we have a full index scan here. Because of this expression(points + 10) , so whenever we use a column, an expression, MySQL is not able to use our index in the best possible way. So to solve this problem, I’m going to change “points + 10 > 2010” to “points > 2000”, 执行代码：可以看到rows变为了3， This is a huge improvement. So if you want MySQL to utilize your indexes, you should always isolate your columns.
+
+十七：Using Indexes for Sorting
+When you add an index on a column, MySQL grabs all the values in that column, sources them, and stores them in the index.
+
+If possible, it is a good idea to design your indexes, so they can be used for filtering and sorting data. But remember, this doesnot always look simple. There are some complications depending on your query, and your where clause on your order by clause, depending on the column you have here, and the order, MySQL might decide not to use your indexes to sorting data. The basic rule of thumb is that these columns that you have with the order by clause should be in the same order as the columns int the index.
+
+ 
+
+十八：Covering Indexes
+An index that covers everything that a query needs. So using this index MySQL can execute our query without touching the table. And this is the fastest performance we can get. So when designing your indexes , first, look at your where clause. Look at the columns that are most frequently there, include those in your index, with this you can narrow down the searches. Then look at the columns in the order by clause. See if you can include these columns in your index. And finally look at the columns used select clause. If you include these columns as well then you will get a covering index. So MySQL can use the index to satisfy your query.
+
+十九：Indexes Maintenance
+As you work with indexes, you need to watch for duplicate and redundant indexes.
+ 
+Duplicate indexes are indexes on the same set of columns in the same order. The problem is that MySQL doesnot stop you from creating these duplicate indexes, if you maintain each dup;icate index separately, sometimes you can create duplicate indexes without being aware of it. This often happen when someone creates an index without looking at the existing indexes, so as a best practice, always check the existing indexes before creating a new one.
+
+Redundant indexes are a litle bit different. If you have an index on two columns like  (A, B) and then create another index on column (A), that is considered redundant, because the former index can also optimize the queries that work with column a, however, if you create an index on column (B, A) , or just column (B), that is not redundant, because these indexes satisfy different queries. Again, redundant indexes appear when someone creats a new index without looking at the existing indexes.
+
+Before creating new indexes, check the existing ones, make sure to drop duplicate, redundant, as well as unused indexes.
+
+
+二十：Create a User
+1: 添加限制：
+CREATE USER john@localhost -- 或者后面加自己电脑的IP地址
+2：设置密码：
+CREATE USER john IDENTIFIED BY '124345'
+
+二十一：Viewing User
+1: SELECT * FROM mysql.user;
+
+从结果中可以看出John can connect from any computers, there is no restrictions.
+2: 点击工作台左边的Administration---Users and Previliges
+
+二十二：Dropping Users
+CREATE USER bob@codewithmosh.com IDENTIFIED BY '1234';
+DROP USER bob@codewithmosh.com;
+
+
+二十三：Changing Passwords
+1: SET PASSWORD FOR john = '1245';
+
+If you want to change your own password, you drop the for clause and this sets the password of the currently logged in user. Whether it is the root user or someone else. 
+SET PASSWORD = '1245';
+
+2: 点击工作台左边的Administration---Users and Previliges---john---右边可以直接修改密码（We can also expire the password and this will force this user to change this password next time theu log in. Just remember whenever you change the password here, you need to click on the reply bottom that is on the bottom right corner of the screen. ）
+
+二十四：Granting Privileges
+Once you create a user account, you should assign some privileges. So in this lecture I’m going to walk you through the two common scenarios. The first scenario is where we have a web or a desktop application, and you want to allow this application to read and write data in your database nit nothing more. You donnot want this application to be able to create a new table, or modify existing tables, that’s something that only an admin should be able to do. The second scenario id for our admin. Let’s say someone new jions our orgnization, and you want to give them administrative privileges over one or more databases or perhaps the entire MySQL server. 
+
+-- 1.web/desktop application
+CREATE USER moon_app IDENTIFIED BY '12434';
+
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE
+ON sql_store.*
+TO moon_app;
+
+执行成功后打开Homepage, 新建一个连接,
+Connection Name: moon_app_connection
+Username: moon_app
+选中Store in Keychain…
+输入密码
+点击Test Connection
+点击OK
+进入新建的连接
+
+检验一下：
+USE sql_store;
+SELECT * FROM customers;
+执行成功即代表没有出错。
+但如果我们使用其他的数据库，则会报错， So I donot have access to any other databases.
+-- 2.admin 
+GRANT ALL
+ON *.* -- This means all tables in all databases
+TO john;
+
+二十五：Viewing Privileges
+1: (1)SHOW GRANTS FOR john;
+(2)SHOW GRANTS FOR john;
+2: 点击工作台左边的Administration---Users and Previliges—点击User Account 中的User, ---在右边点击Administrative Roles.
+
+二十六：Revoking Privileges
+GRANT CREATE VIEW
+ON sql_store.*
+TO moon_app;
+
+先执行第一段代码，执行成功后再执行后面的代码。
+So we made a mistake, now we want to revoke this privilege. (将GRANT 更改为REVOKE, TO 更改为FROM)
+
+
+REVOKECREATE VIEW
+ON sql_store.*
+FROM moon_app;
+
+So take security seriously, and donot grant more privileges to a user then necessary, laways grant the minimun required by user account, otherwise your opening so many security holes in our system, and this brings us to the end of this section.
+
+
+
+
