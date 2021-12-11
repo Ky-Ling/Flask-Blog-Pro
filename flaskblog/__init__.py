@@ -10,7 +10,6 @@
 # db = SQLAlchemy()
 # DB_NAME = "database.db"
 
-
 # class Config:
 #     # To use these forms, we need to set a secret key for our application. Secret key will protect against modifying cookies and
 #     #   cross-site request forgery attacks and things like that.
