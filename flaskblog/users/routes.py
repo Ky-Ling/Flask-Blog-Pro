@@ -15,7 +15,7 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.home'))
 
-    # Create an instance of our form that we are going to send to our userslication
+    # Create an instance of our form that we are going to send to our users location
     form = RegistrationForm()
 
     # Check if our form validated when it was submitted
