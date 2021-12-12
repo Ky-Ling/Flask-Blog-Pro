@@ -1,7 +1,7 @@
 '''
 Date: 2021-11-29 14:51:18
 LastEditors: GC
-LastEditTime: 2021-12-05 14:15:30
+LastEditTime: 2021-12-12 21:29:02
 FilePath: \Flask-Blog-Project2\flaskblog\models.py
 '''
 from flaskblog import db
@@ -51,6 +51,9 @@ class User(db.Model, UserMixin):
 
         return User.query.get(user_id)
 
+    def get_id(self):
+        return unicode(self.alternative_id)
+        
     def __repr__(self):
         return f"User('{ self.username }', '{ self.email }', '{ self.image_file }')"
 

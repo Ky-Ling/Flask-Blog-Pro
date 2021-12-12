@@ -131,7 +131,10 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        # return User.query.get(int(user_id))
+
+        return User.query.filter_by(alternative_id=user_id).first()
+        # The alternative_id is in User class of models.py
 
     return app
 
